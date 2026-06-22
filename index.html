@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель NORTH</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: #080b12; color: #dce0ec; padding: 30px 20px; display: flex; justify-content: center; }
+        .container { max-width: 1100px; width: 100%; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0 30px; border-bottom: 1px solid #1a2236; flex-wrap: wrap; gap: 15px; }
+        .logo { font-size: 28px; font-weight: 700; }
+        .logo span { color: #6c8cff; }
+        .badge { background: #161d2b; padding: 6px 18px; border-radius: 40px; border: 1px solid #2a324a; font-size: 13px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 30px; }
+        .panel { background: #111926; border-radius: 18px; padding: 24px 26px; border: 1px solid #222b3e; }
+        .panel h3 { font-size: 19px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+        .panel input, .panel select { width: 100%; padding: 10px 14px; margin: 6px 0 14px; background: #0d1420; border: 1px solid #2a334a; border-radius: 10px; color: #eee; font-size: 14px; }
+        .panel input:focus, .panel select:focus { outline: none; border-color: #6c8cff; }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .row .btn { flex: 1; min-width: 80px; text-align: center; }
+        .btn { background: #6c8cff; color: #fff; border: none; padding: 9px 18px; border-radius: 40px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #5a7ae6; transform: scale(1.02); }
+        .btn-outline { background: transparent; border: 1px solid #6c8cff; }
+        .btn-outline:hover { background: #1a2340; }
+        .btn-danger { background: #dc5c5c; }
+        .btn-danger:hover { background: #c24a4a; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+        .btn-success { background: #4ade80; color: #0a0c14; }
+        .btn-success:hover { background: #3dca72; }
+        .list-box { background: #0d1420; border-radius: 12px; padding: 12px 16px; max-height: 200px; overflow-y: auto; border: 1px solid #1e263a; font-size: 13px; font-family: monospace; margin-top: 8px; }
+        .list-box .item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #181f30; }
+        .list-box .item .del { color: #dc5c5c; cursor: pointer; font-weight: 700; }
+        .list-box .empty { color: #4a5570; text-align: center; padding: 10px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin: 15px 0 20px; }
+        .stats .stat { background: #0d1420; padding: 8px 18px; border-radius: 40px; border: 1px solid #1e263a; font-size: 13px; }
+        .stats .stat span { color: #6c8cff; font-weight: 700; }
+        .full-width { grid-column: 1 / -1; }
+        @media (max-width: 750px) { .grid { grid-template-columns: 1fr; } }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .tag-80 { background: #1a3a6a; color: #6c8cff; }
+        .tag-lifetime { background: #3a1a3a; color: #ff6c8c; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">⚙️ <span>NORTH</span> Admin</div>
+        <div>
+            <span class="badge">👑 Администратор</span>
+            <button class="btn btn-outline btn-sm" onclick="logoutAdmin()" style="margin-left: 12px;">Выйти</button>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat">Всего ключей: <span id="statKeys">0</span></div>
+        <div class="stat">80 дней: <span id="stat80">0</span></div>
+        <div class="stat">Lifetime: <span id="statLifetime">0</span></div>
+        <div class="stat">Использовано: <span id="statUsed">0</span></div>
+        <div class="stat">Пользователей: <span id="statUsers">0</span></div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h3>🔑 Создать ключ</h3>
+            <select id="keyTypeSelect">
+                <option value="80">80 дней</option>
+                <option value="lifetime">Lifetime (навсегда)</option>
+            </select>
+            <div class="row">
+                <input type="text" id="newKeyInput" placeholder="Введите ключ или нажмите генерацию">
+                <button class="btn" onclick="createKey()">Создать</button>
+            </div>
+            <div style="margin-top: 6px;">
+                <button class="btn btn-outline btn-sm" onclick="generateRandomKey()">🎲 Сгенерировать</button>
+                <button class="btn btn-outline btn-sm" onclick="bulkCreateKeys()">📦 Создать 5</button>
+            </div>
+            <div id="keyCreateMsg" style="margin-top: 10px; font-size: 13px;"></div>
+        </div>
+
+        <div class="panel">
+            <h3>📋 Все ключи</h3>
+            <div class="row">
+                <button class="btn btn-outline btn-sm" onclick="refreshKeys()">🔄 Обновить</button>
+                <button class="btn btn-danger btn-sm" onclick="clearAllKeys()">🗑️ Очистить все</button>
+            </div>
+            <div class="list-box" id="keysList"><div class="empty">Нет ключей</div></div>
+        </div>
+
+        <div class="panel">
+            <h3>👥 Пользователи</h3>
+            <div class="row">
+                <input type="text" id="userNameInput" placeholder="Имя пользователя">
+                <button class="btn btn-outline btn-sm" onclick="showUserKeys()">🔍 Показать ключи</button>
+            </div>
+            <div class="row" style="margin-top: 6px;">
+                <input type="text" id="banInput" placeholder="Имя для бана">
+                <button class="btn btn-danger btn-sm" onclick="banUser()">🚫 Забанить</button>
+            </div>
+            <div class="row" style="margin-top: 6px;">
+                <input type="text" id="unbanInput" placeholder="Имя для разбана">
+                <button class="btn btn-outline btn-sm" onclick="unbanUser()">✅ Разбанить</button>
+            </div>
+            <div id="userActionMsg" style="margin-top: 10px; font-size: 13px;"></div>
+        </div>
+
+        <div class="panel">
+            <h3>⛔ Забаненные</h3>
+            <button class="btn btn-outline btn-sm" onclick="refreshBanned()">🔄 Обновить</button>
+            <div class="list-box" id="bannedList"><div class="empty">Нет забаненных</div></div>
+        </div>
+
+        <div class="panel full-width">
+            <h3>📊 Все пользователи</h3>
+            <button class="btn btn-outline btn-sm" onclick="refreshAllUsers()">🔄 Обновить</button>
+            <div class="list-box" id="allUsersList" style="max-height: 250px;"><div class="empty">Нет пользователей</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== ДАННЫЕ =====
+    let keysDB = JSON.parse(localStorage.getItem('north_keys')) || {};
+    let usedKeys = JSON.parse(localStorage.getItem('north_used_keys')) || [];
+    let usersDB = JSON.parse(localStorage.getItem('north_users')) || {};
+    let bannedUsers = JSON.parse(localStorage.getItem('north_banned')) || [];
+
+    // Формат ключа: { "ключ": { type: "80" или "lifetime" } }
+
+    function saveAll() {
+        localStorage.setItem('north_keys', JSON.stringify(keysDB));
+        localStorage.setItem('north_used_keys', JSON.stringify(usedKeys));
+        localStorage.setItem('north_users', JSON.stringify(usersDB));
+        localStorage.setItem('north_banned', JSON.stringify(bannedUsers));
+        // Синхронизация с сайтом
+        localStorage.setItem('north_admin_keys', JSON.stringify(keysDB));
+        localStorage.setItem('north_keys_updated', Date.now().toString());
+    }
+
+    function updateStats() {
+        const total = Object.keys(keysDB).length;
+        const used = usedKeys.length;
+        const count80 = Object.values(keysDB).filter(k => k.type === '80').length;
+        const countLifetime = Object.values(keysDB).filter(k => k.type === 'lifetime').length;
+        document.getElementById('statKeys').textContent = total;
+        document.getElementById('stat80').textContent = count80;
+        document.getElementById('statLifetime').textContent = countLifetime;
+        document.getElementById('statUsed').textContent = used;
+        document.getElementById('statUsers').textContent = Object.keys(usersDB).length;
+    }
+
+    function refreshKeys() {
+        const list = document.getElementById('keysList');
+        const entries = Object.entries(keysDB);
+        if (entries.length === 0) { list.innerHTML = '<div class="empty">Нет ключей</div>'; return; }
+        let html = '';
+        entries.forEach(([key, data]) => {
+            const isUsed = usedKeys.includes(key);
+            const typeLabel = data.type === 'lifetime' ? '♾️ Lifetime' : '⚡ 80 дней';
+            const typeClass = data.type === 'lifetime' ? 'tag-lifetime' : 'tag-80';
+            const status = isUsed ? '🔴 Использован' : '🟢 Свободен';
+            html += `<div class="item">
+                <span>🔑 ${key} <span class="tag ${typeClass}">${typeLabel}</span> — ${status}</span>
+                <span class="del" onclick="deleteKey('${key}')">✖</span>
+            </div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function refreshBanned() {
+        const list = document.getElementById('bannedList');
+        if (bannedUsers.length === 0) { list.innerHTML = '<div class="empty">Нет забаненных</div>'; return; }
+        let html = '';
+        bannedUsers.forEach(u => {
+            html += `<div class="item"><span>⛔ ${u}</span><span class="del" onclick="unbanUserDirect('${u}')">✖</span></div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function refreshAllUsers() {
+        const list = document.getElementById('allUsersList');
+        const entries = Object.entries(usersDB);
+        if (entries.length === 0) { list.innerHTML = '<div class="empty">Нет пользователей</div>'; return; }
+        let html = '';
+        entries.forEach(([name, data]) => {
+            const keys = data.keys || [];
+            const banned = bannedUsers.includes(name) ? ' ⛔' : '';
+            const keysStr = keys.length > 0 ? keys.join(', ') : 'нет ключей';
+            html += `<div class="item"><span>👤 ${name}${banned}</span><span>${keys.length} ключей: ${keysStr}</span></div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function createKey() {
+        const input = document.getElementById('newKeyInput');
+        const type = document.getElementById('keyTypeSelect').value;
+        let key = input.value.trim();
+        
+        if (!key) { 
+            document.getElementById('keyCreateMsg').textContent = '❌ Введите ключ или нажмите генерацию';
+            document.getElementById('keyCreateMsg').style.color = '#f87171';
+            return; 
+        }
+        if (keysDB[key]) { 
+            document.getElementById('keyCreateMsg').textContent = '❌ Ключ уже существует';
+            document.getElementById('keyCreateMsg').style.color = '#f87171';
+            return; 
+        }
+        
+        keysDB[key] = { type: type };
+        saveAll();
+        input.value = '';
+        document.getElementById('keyCreateMsg').textContent = '✅ Ключ "' + key + '" (' + (type === 'lifetime' ? 'Lifetime' : '80 дней') + ') создан!';
+        document.getElementById('keyCreateMsg').style.color = '#4ade80';
+        refreshKeys();
+        updateStats();
+        console.log('✅ Создан ключ:', key, 'Тип:', type);
+    }
+
+    function generateRandomKey() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let key = '';
+        for (let i = 0; i < 4; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        key += '-';
+        for (let i = 0; i < 4; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        key += '-';
+        for (let i = 0; i < 6; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        document.getElementById('newKeyInput').value = key;
+        document.getElementById('keyCreateMsg').textContent = '🎲 Сгенерирован: ' + key;
+        document.getElementById('keyCreateMsg').style.color = '#8a94b0';
+    }
+
+    function bulkCreateKeys() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const type = document.getElementById('keyTypeSelect').value;
+        let created = 0;
+        for (let j = 0; j < 5; j++) {
+            let key = '';
+            for (let i = 0; i < 4; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+            key += '-';
+            for (let i = 0; i < 4; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+            key += '-';
+            for (let i = 0; i < 6; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+            if (!keysDB[key]) { 
+                keysDB[key] = { type: type };
+                created++; 
+            }
+        }
+        saveAll();
+        document.getElementById('keyCreateMsg').textContent = '📦 Создано ' + created + ' ключей (' + (type === 'lifetime' ? 'Lifetime' : '80 дней') + ')';
+        document.getElementById('keyCreateMsg').style.color = '#4ade80';
+        refreshKeys();
+        updateStats();
+    }
+
+    function deleteKey(key) {
+        if (!confirm('Удалить ключ ' + key + '?')) return;
+        delete keysDB[key];
+        usedKeys = usedKeys.filter(k => k !== key);
+        for (const user in usersDB) {
+            if (usersDB[user].keys) usersDB[user].keys = usersDB[user].keys.filter(k => k !== key);
+        }
+        saveAll();
+        refreshKeys();
+        refreshAllUsers();
+        updateStats();
+        document.getElementById('keyCreateMsg').textContent = '🗑️ Ключ удалён';
+        document.getElementById('keyCreateMsg').style.color = '#8a94b0';
+    }
+
+    function clearAllKeys() {
+        if (!confirm('Удалить ВСЕ ключи?')) return;
+        keysDB = {};
+        usedKeys = [];
+        for (const user in usersDB) usersDB[user].keys = [];
+        saveAll();
+        refreshKeys();
+        refreshAllUsers();
+        updateStats();
+        document.getElementById('keyCreateMsg').textContent = '🗑️ Все ключи удалены';
+        document.getElementById('keyCreateMsg').style.color = '#8a94b0';
+    }
+
+    function showUserKeys() {
+        const name = document.getElementById('userNameInput').value.trim();
+        const msg = document.getElementById('userActionMsg');
+        if (!name) { msg.textContent = '❌ Введите имя'; return; }
+        const userData = usersDB[name];
+        if (!userData) { msg.textContent = '👤 Пользователь не найден'; return; }
+        const keys = userData.keys || [];
+        msg.textContent = keys.length ? '👤 ' + name + ' — ключи: ' + keys.join(', ') : '👤 ' + name + ' — нет ключей';
+    }
+
+    function banUser() {
+        const name = document.getElementById('banInput').value.trim();
+        if (!name) { document.getElementById('userActionMsg').textContent = '❌ Введите имя'; return; }
+        if (bannedUsers.includes(name)) { document.getElementById('userActionMsg').textContent = '⚠️ Уже в бане'; return; }
+        bannedUsers.push(name);
+        saveAll();
+        document.getElementById('banInput').value = '';
+        document.getElementById('userActionMsg').textContent = '⛔ ' + name + ' забанен';
+        refreshBanned();
+        updateStats();
+    }
+
+    function unbanUser() {
+        const name = document.getElementById('unbanInput').value.trim();
+        if (!name) { document.getElementById('userActionMsg').textContent = '❌ Введите имя'; return; }
+        const idx = bannedUsers.indexOf(name);
+        if (idx === -1) { document.getElementById('userActionMsg').textContent = '⚠️ Не в бане'; return; }
+        bannedUsers.splice(idx, 1);
+        saveAll();
+        document.getElementById('unbanInput').value = '';
+        document.getElementById('userActionMsg').textContent = '✅ ' + name + ' разбанен';
+        refreshBanned();
+        updateStats();
+    }
+
+    function unbanUserDirect(name) {
+        const idx = bannedUsers.indexOf(name);
+        if (idx !== -1) { bannedUsers.splice(idx, 1); saveAll(); refreshBanned(); updateStats(); }
+    }
+
+    function logoutAdmin() {
+        if (confirm('Выйти из админ-панели?')) window.location.href = 'index.html';
+    }
+
+    // ===== ИНИЦИАЛИЗАЦИЯ =====
+    function init() {
+        // Если нет ключей — создаём тестовые
+        if (Object.keys(keysDB).length === 0) {
+            keysDB['OUIASD-123eA-APSJ11'] = { type: '80' };
+            keysDB['DEMO-KEY-2026'] = { type: 'lifetime' };
+            keysDB['TEST-AAAA-BBBBBB'] = { type: '80' };
+            saveAll();
+            console.log('✅ Добавлены тестовые ключи');
+        }
+        if (Object.keys(usersDB).length === 0) {
+            usersDB['admin'] = { password: 'admin', keys: [] };
+            saveAll();
+        }
+        refreshKeys();
+        refreshBanned();
+        refreshAllUsers();
+        updateStats();
+        console.log('✅ Админ-панель загружена. Ключей:', Object.keys(keysDB).length);
+    }
+
+    init();
+</script>
+</body>
+</html>
